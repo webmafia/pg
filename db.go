@@ -8,6 +8,7 @@ import (
 type DB struct {
 	db      *pgxpool.Pool
 	bufPool *fast.Pool[fast.StringBuffer]
+	argPool *fast.Pool[[]any]
 }
 
 func NewDB(db *pgxpool.Pool) *DB {
@@ -17,6 +18,11 @@ func NewDB(db *pgxpool.Pool) *DB {
 			sb.Grow(256)
 		}, func(sb *fast.StringBuffer) {
 			sb.Reset()
+		}),
+		argPool: fast.NewPool[[]any](func(a *[]any) {
+			*a = make([]any, 0, 5)
+		}, func(a *[]any) {
+			*a = (*a)[:0]
 		}),
 	}
 }
