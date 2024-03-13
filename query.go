@@ -16,7 +16,6 @@ import (
 // }
 
 func indexQuery(format string) (q indexedQuery) {
-	var argNum int
 	end := len(format)
 
 formatLoop:
@@ -41,9 +40,6 @@ formatLoop:
 			continue formatLoop
 		}
 
-		// Do we have an explicit argument index?
-		argNum, i, _ = argNumber(argNum, format, i)
-
 		if i >= end {
 			break
 		}
@@ -51,62 +47,51 @@ formatLoop:
 		c := format[i]
 
 		if ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') {
-			argNum++
 			i++
-			q.argNum = append(q.argNum, argNum)
-			q.indices = append(q.indices, index{
-				idx: idx,
-				len: i - idx,
-			})
+			q.indices = append(q.indices, idx)
 
 			continue formatLoop
 		}
 	}
 
 	q.query = format
-	q.numArgs = argNum
 
 	return
 }
 
 type indexedQuery struct {
-	indices []index
-	argNum  []int
-	numArgs int
 	query   string
-}
-
-type index struct {
-	idx, len int
+	indices []int
 }
 
 func (q indexedQuery) encodeQuery(buf *fast.StringBuffer, args []any) (err error) {
-	if l := len(args); l != q.numArgs {
-		return fmt.Errorf("invalid number of arguments; expected %d, got %d", q.numArgs, l)
+	if expect, got := len(q.indices), len(args); expect != got {
+		return fmt.Errorf("invalid number of arguments; expected %d, got %d", expect, got)
 	}
 
 	// Short circuit if there are no args
-	if q.numArgs == 0 {
+	if len(q.indices) == 0 {
 		buf.WriteString(q.query)
 		return
 	}
 
 	var last int
+	argNum := 1
 
 	for i, idx := range q.indices {
-		buf.WriteString(q.query[last:idx.idx])
-		last = idx.idx + idx.len
+		buf.WriteString(q.query[last:idx])
+		last = idx + 2
 
-		argNum := q.argNum[i]
-		arg := args[argNum-1]
-
-		if enc, ok := arg.(fast.StringEncoder); ok {
+		if enc, ok := args[i].(fast.StringEncoder); ok {
 			enc.EncodeString(buf)
 		} else {
 			buf.WriteByte('$')
 			buf.WriteInt(argNum)
+			argNum++
 		}
 	}
+
+	buf.WriteString(q.query[last:])
 
 	return
 }
