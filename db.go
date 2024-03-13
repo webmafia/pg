@@ -6,23 +6,24 @@ import (
 )
 
 type DB struct {
-	db      *pgxpool.Pool
-	bufPool *fast.Pool[fast.StringBuffer]
-	argPool *fast.Pool[[]any]
+	db       *pgxpool.Pool
+	instPool *fast.Pool[inst]
+}
+
+type inst struct {
+	buf  *fast.StringBuffer
+	args []any
 }
 
 func NewDB(db *pgxpool.Pool) *DB {
 	return &DB{
 		db: db,
-		bufPool: fast.NewPool[fast.StringBuffer](func(sb *fast.StringBuffer) {
-			sb.Grow(256)
-		}, func(sb *fast.StringBuffer) {
-			sb.Reset()
-		}),
-		argPool: fast.NewPool[[]any](func(a *[]any) {
-			*a = make([]any, 0, 5)
-		}, func(a *[]any) {
-			*a = (*a)[:0]
+		instPool: fast.NewPool[inst](func(i *inst) {
+			i.buf = fast.NewStringBuffer(256)
+			i.args = make([]any, 0, 5)
+		}, func(i *inst) {
+			i.buf.Reset()
+			i.args = i.args[:0]
 		}),
 	}
 }

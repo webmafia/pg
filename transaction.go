@@ -5,7 +5,58 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func (db *DB) Transaction(ctx context.Context, readOnly ...bool) (tx Tx, err error) {
+	conn, err := db.db.Acquire(ctx)
+
+	if err != nil {
+		return
+	}
+
+	if len(readOnly) > 0 && readOnly[0] {
+		if _, err = conn.Exec(ctx, "BEGIN READ ONLY"); err != nil {
+			return
+		}
+	} else {
+		if _, err = conn.Exec(ctx, "BEGIN"); err != nil {
+			return
+		}
+	}
+
+	tx = Tx{
+		db:   db,
+		conn: conn,
+	}
+
+	return
+}
+
+type Tx struct {
+	db     *DB
+	conn   *pgxpool.Conn
+	closed bool
+}
+
+func (tx *Tx) Commit(ctx context.Context) (err error) {
+	return tx.close(ctx, "COMMIT")
+}
+
+func (tx *Tx) Rollback(ctx context.Context) (err error) {
+	return tx.close(ctx, "ROLLBACK")
+}
+
+func (tx *Tx) close(ctx context.Context, query string) (err error) {
+	if tx.closed {
+		return
+	}
+
+	_, err = tx.conn.Exec(ctx, query)
+	tx.conn.Release()
+	tx.closed = true
+	return
+}
 
 // Query sends a query to the server and returns a Rows to read the results. Only errors encountered sending the query
 // and initializing Rows will be returned. Err() on the returned Rows must be checked after the Rows is closed to
@@ -21,33 +72,33 @@ import (
 // It is possible for a query to return one or more rows before encountering an error. In most cases the rows should be
 // collected before processing rather than processed while receiving each row. This avoids the possibility of the
 // application processing rows from a query that the server rejected. The CollectRows function is useful here.
-func (db *DB) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
-	inst := db.instPool.Acquire()
-	defer db.instPool.Release(inst)
+func (tx *Tx) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
+	inst := tx.db.instPool.Acquire()
+	defer tx.db.instPool.Release(inst)
 
 	encodeQuery(inst.buf, query, args, &inst.args)
 
-	return db.db.Query(ctx, query, inst.args...)
+	return tx.conn.Query(ctx, query, inst.args...)
 }
 
 // QueryRow is a convenience wrapper over Query. Any error that occurs while querying is deferred
 // until calling Scan on the returned Row. That Row will error with ErrNoRows if no rows are returned.
-func (db *DB) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
-	inst := db.instPool.Acquire()
-	defer db.instPool.Release(inst)
+func (tx *Tx) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
+	inst := tx.db.instPool.Acquire()
+	defer tx.db.instPool.Release(inst)
 
 	encodeQuery(inst.buf, query, args, &inst.args)
 
-	return db.db.QueryRow(ctx, query, inst.args...)
+	return tx.conn.QueryRow(ctx, query, inst.args...)
 }
 
 // Exec executes sql. sql can be either a prepared statement name or an SQL string. arguments should be referenced
 // positionally from the sql string as $1, $2, etc.
-func (db *DB) Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error) {
-	inst := db.instPool.Acquire()
-	defer db.instPool.Release(inst)
+func (tx *Tx) Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error) {
+	inst := tx.db.instPool.Acquire()
+	defer tx.db.instPool.Release(inst)
 
 	encodeQuery(inst.buf, query, args, &inst.args)
 
-	return db.db.Exec(ctx, query, inst.args...)
+	return tx.conn.Exec(ctx, query, inst.args...)
 }

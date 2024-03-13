@@ -1,6 +1,7 @@
 package pg
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -29,5 +30,14 @@ func Benchmark_encodeQuery(b *testing.B) {
 		encodeQuery(buf, "SELECT * FROM %T WHERE foo = %d", []any{Table("trudeluttan"), 123}, &queryArgs)
 		buf.Reset()
 		queryArgs = queryArgs[:0]
+	}
+}
+
+func BenchmarkQuery(b *testing.B) {
+	db := NewDB(nil)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		db.Query(context.Background(), "SELECT * FROM %T WHERE foo = %d AND bar = %s AND baz = %s", Table("trudeluttan"), 123, Table("mjau"), 456)
 	}
 }
