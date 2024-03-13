@@ -11,14 +11,9 @@ type DB struct {
 	valPool  *fast.Pool[Values]
 }
 
-type inst struct {
-	buf  *fast.StringBuffer
-	args []any
-}
-
-func NewDB(pool *pgxpool.Pool) *DB {
-	db := &DB{
-		db: pool,
+func NewDB(db *pgxpool.Pool) *DB {
+	return &DB{
+		db: db,
 		instPool: fast.NewPool[inst](func(i *inst) {
 			i.buf = fast.NewStringBuffer(256)
 			i.args = make([]any, 0, 5)
@@ -26,14 +21,11 @@ func NewDB(pool *pgxpool.Pool) *DB {
 			i.buf.Reset()
 			i.args = i.args[:0]
 		}),
+		valPool: fast.NewPool[Values](func(v *Values) {
+			v.columns = make([]string, 0, 5)
+			v.values = make([]any, 0, 5)
+		}, func(v *Values) {
+			v.reset()
+		}),
 	}
-
-	db.valPool = fast.NewPool[Values](func(v *Values) {
-		v.columns = make([]string, 0, 5)
-		v.values = make([]any, 0, 5)
-	}, func(v *Values) {
-		v.reset()
-	})
-
-	return db
 }
