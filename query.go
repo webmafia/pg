@@ -35,13 +35,17 @@ func encodeQuery(buf *fast.StringBuffer, format string, args []any, queryArgs *[
 		c := format[i]
 
 		if ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') {
-			if enc, ok := args[0].(fast.StringEncoder); ok {
-				enc.EncodeString(buf)
-			} else {
+			switch v := args[0].(type) {
+
+			case fast.StringEncoder:
+				v.EncodeString(buf)
+
+			default:
 				buf.WriteByte('$')
 				buf.WriteInt(argNum)
-				*queryArgs = append(*queryArgs, args[0])
+				*queryArgs = append(*queryArgs, v)
 				argNum++
+
 			}
 
 			args = args[1:]
