@@ -27,6 +27,10 @@ func (db *DB) Query(ctx context.Context, query string, args ...any) (pgx.Rows, e
 
 	encodeQuery(inst.buf, query, args, &inst.args)
 
+	if tx, ok := ctx.(*Tx); ok {
+		return tx.conn.Query(ctx, query, inst.args...)
+	}
+
 	return db.db.Query(ctx, query, inst.args...)
 }
 
@@ -38,6 +42,10 @@ func (db *DB) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
 
 	encodeQuery(inst.buf, query, args, &inst.args)
 
+	if tx, ok := ctx.(*Tx); ok {
+		return tx.conn.QueryRow(ctx, query, inst.args...)
+	}
+
 	return db.db.QueryRow(ctx, query, inst.args...)
 }
 
@@ -48,6 +56,10 @@ func (db *DB) Exec(ctx context.Context, query string, args ...any) (pgconn.Comma
 	defer db.instPool.Release(inst)
 
 	encodeQuery(inst.buf, query, args, &inst.args)
+
+	if tx, ok := ctx.(*Tx); ok {
+		return tx.conn.Exec(ctx, query, inst.args...)
+	}
 
 	return db.db.Exec(ctx, query, inst.args...)
 }
