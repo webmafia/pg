@@ -6,9 +6,12 @@ import (
 	"github.com/webmafia/fast"
 )
 
+type QueryEncoder interface {
+	EncodeQuery(buf *fast.StringBuffer, queryArgs *[]any)
+}
+
 func encodeQuery(buf *fast.StringBuffer, format string, args []any, queryArgs *[]any) {
 	var cursor int
-	argNum := 1
 
 	for {
 		if len(args) == 0 {
@@ -35,18 +38,7 @@ func encodeQuery(buf *fast.StringBuffer, format string, args []any, queryArgs *[
 		c := format[i]
 
 		if ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') {
-			switch v := args[0].(type) {
-
-			case fast.StringEncoder:
-				v.EncodeString(buf)
-
-			default:
-				buf.WriteByte('$')
-				buf.WriteInt(argNum)
-				*queryArgs = append(*queryArgs, v)
-				argNum++
-
-			}
+			writeAny(buf, queryArgs, args[0])
 
 			args = args[1:]
 		}

@@ -7,7 +7,7 @@ import (
 )
 
 func BenchmarkTableEncode(b *testing.B) {
-	t := Table("foobar")
+	t := Identifier("foobar")
 	buf := fast.NewStringBuffer(512)
 
 	b.ResetTimer()
