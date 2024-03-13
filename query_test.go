@@ -13,7 +13,7 @@ func Benchmark_encodeQuery(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		encodeQuery(buf, "SELECT * FROM %T WHERE foo = %d AND bar = %s AND baz = %s", []any{Identifier("trudeluttan"), 123, Identifier("mjau"), 456}, &queryArgs)
+		encodeQuery(buf, "SELECT * FROM %T WHERE foo = %d AND bar = %s AND baz = %s", []any{Identifier("foo"), 123, Identifier("bar"), 456}, &queryArgs)
 		buf.Reset()
 		queryArgs = queryArgs[:0]
 	}
@@ -27,7 +27,7 @@ func Benchmark_encodeQuery2(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		encodeQuery(buf, "SELECT * FROM %T WHERE %T", []any{
-			Identifier("trudeluttan"),
+			Identifier("foobar"),
 			Or(
 				Eq("foo", "bar"),
 				Eq("baz", "bez"),
