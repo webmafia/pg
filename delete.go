@@ -6,10 +6,7 @@ func (db *DB) Delete(ctx context.Context, table Identifier, cond QueryEncoder) (
 	inst := db.instPool.Acquire()
 	defer db.instPool.Release(inst)
 
-	inst.buf.WriteString("DELETE FROM ")
-	table.EncodeString(inst.buf)
-	inst.buf.WriteString(" WHERE ")
-	cond.EncodeQuery(inst.buf, &inst.args)
+	db.deleteQuery(inst, table, cond)
 
 	cmd, err := db.exec(ctx, inst.buf.String(), inst.args...)
 
@@ -20,4 +17,11 @@ func (db *DB) Delete(ctx context.Context, table Identifier, cond QueryEncoder) (
 	}
 
 	return
+}
+
+func (db *DB) deleteQuery(inst *inst, table Identifier, cond QueryEncoder) {
+	inst.buf.WriteString("DELETE FROM ")
+	table.EncodeString(inst.buf)
+	inst.buf.WriteString(" WHERE ")
+	cond.EncodeQuery(inst.buf, &inst.args)
 }

@@ -12,6 +12,22 @@ func (db *DB) UpdateValues(ctx context.Context, table Identifier, vals *Values, 
 	inst := db.instPool.Acquire()
 	defer db.instPool.Release(inst)
 
+	db.updateValuesQuery(inst, table, vals, cond)
+
+	cmd, err := db.exec(ctx, inst.buf.String(), inst.args...)
+
+	if err != nil {
+		err = instError(err, inst)
+	} else {
+		count = cmd.RowsAffected()
+	}
+
+	vals.reset()
+
+	return
+}
+
+func (db *DB) updateValuesQuery(inst *inst, table Identifier, vals *Values, cond QueryEncoder) {
 	inst.buf.WriteString("UPDATE ")
 	table.EncodeString(inst.buf)
 	inst.buf.WriteString(" SET ")
@@ -29,15 +45,4 @@ func (db *DB) UpdateValues(ctx context.Context, table Identifier, vals *Values, 
 	inst.buf.WriteString(" WHERE ")
 	cond.EncodeQuery(inst.buf, &inst.args)
 
-	cmd, err := db.exec(ctx, inst.buf.String(), inst.args...)
-
-	if err != nil {
-		err = instError(err, inst)
-	} else {
-		count = cmd.RowsAffected()
-	}
-
-	vals.reset()
-
-	return
 }

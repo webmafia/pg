@@ -13,6 +13,22 @@ func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, 
 	inst := db.instPool.Acquire()
 	defer db.instPool.Release(inst)
 
+	db.insertValuesQuery(inst, table, vals, conflictColumns)
+
+	cmd, err := db.exec(ctx, inst.buf.String(), inst.args...)
+
+	if err != nil {
+		err = instError(err, inst)
+	} else {
+		count = cmd.RowsAffected()
+	}
+
+	vals.reset()
+
+	return
+}
+
+func (db *DB) insertValuesQuery(inst *inst, table Identifier, vals *Values, conflictColumns []string) {
 	inst.buf.WriteString("INSERT INTO ")
 	table.EncodeString(inst.buf)
 	inst.buf.WriteString(" (")
@@ -58,16 +74,4 @@ func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, 
 			inst.buf.WriteString("DO NOTHING")
 		}
 	}
-
-	cmd, err := db.exec(ctx, inst.buf.String(), inst.args...)
-
-	if err != nil {
-		err = instError(err, inst)
-	} else {
-		count = cmd.RowsAffected()
-	}
-
-	vals.reset()
-
-	return
 }
