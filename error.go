@@ -2,8 +2,6 @@ package pg
 
 import (
 	"fmt"
-
-	"github.com/webmafia/fast"
 )
 
 var (
@@ -17,14 +15,14 @@ type Error struct {
 	args  []any
 }
 
-func errorFromCopy(err error, buf *fast.StringBuffer, args []any) Error {
+func instError(err error, inst *inst) Error {
 	e := Error{
 		err:   err,
-		query: string(buf.Bytes()),
-		args:  make([]any, len(args)),
+		query: string(inst.buf.Bytes()),
+		args:  make([]any, len(inst.args)),
 	}
 
-	copy(e.args, args)
+	copy(e.args, inst.args)
 
 	return e
 }

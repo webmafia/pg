@@ -29,15 +29,10 @@ func NewDB(pool *pgxpool.Pool) *DB {
 	}
 
 	db.valPool = fast.NewPool[Values](func(v *Values) {
-		v.conflictColumns = make([]string, 0, 5)
 		v.columns = make([]string, 0, 5)
 		v.values = make([]any, 0, 5)
-		v.db = db
 	}, func(v *Values) {
-		v.conflictColumns = v.conflictColumns[:0]
-		v.columns = v.columns[:0]
-		v.values = v.values[:0]
-		v.update = false
+		v.reset()
 	})
 
 	return db

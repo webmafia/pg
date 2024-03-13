@@ -27,11 +27,15 @@ func (db *DB) Query(ctx context.Context, query string, args ...any) (pgx.Rows, e
 
 	encodeQuery(inst.buf, query, args, &inst.args)
 
+	return db.query(ctx, inst.buf.String(), inst.args...)
+}
+
+func (db *DB) query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
 	if tx, ok := ctx.(*Tx); ok {
-		return tx.conn.Query(ctx, query, inst.args...)
+		return tx.conn.Query(ctx, query, args...)
 	}
 
-	return db.db.Query(ctx, query, inst.args...)
+	return db.db.Query(ctx, query, args...)
 }
 
 // QueryRow is a convenience wrapper over Query. Any error that occurs while querying is deferred
@@ -42,11 +46,15 @@ func (db *DB) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
 
 	encodeQuery(inst.buf, query, args, &inst.args)
 
+	return db.queryRow(ctx, inst.buf.String(), inst.args...)
+}
+
+func (db *DB) queryRow(ctx context.Context, query string, args ...any) pgx.Row {
 	if tx, ok := ctx.(*Tx); ok {
-		return tx.conn.QueryRow(ctx, query, inst.args...)
+		return tx.conn.QueryRow(ctx, query, args...)
 	}
 
-	return db.db.QueryRow(ctx, query, inst.args...)
+	return db.db.QueryRow(ctx, query, args...)
 }
 
 // Exec executes sql. sql can be either a prepared statement name or an SQL string. arguments should be referenced
@@ -57,9 +65,13 @@ func (db *DB) Exec(ctx context.Context, query string, args ...any) (pgconn.Comma
 
 	encodeQuery(inst.buf, query, args, &inst.args)
 
+	return db.exec(ctx, inst.buf.String(), inst.args...)
+}
+
+func (db *DB) exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error) {
 	if tx, ok := ctx.(*Tx); ok {
-		return tx.conn.Exec(ctx, query, inst.args...)
+		return tx.conn.Exec(ctx, query, args...)
 	}
 
-	return db.db.Exec(ctx, query, inst.args...)
+	return db.db.Exec(ctx, query, args...)
 }
