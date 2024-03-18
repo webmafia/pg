@@ -29,3 +29,7 @@ func NewDB(db *pgxpool.Pool) *DB {
 		}),
 	}
 }
+
+func (db *DB) Close() {
+	db.db.Close()
+}
