@@ -53,6 +53,7 @@ func (m *multi) Or(v QueryEncoder) MultiOr {
 // EncodeQuery implements MultiAnd.
 func (m *multi) EncodeQuery(buf *fast.StringBuffer, queryArgs *[]any) {
 	if len(m.ops) == 0 {
+		buf.WriteString("1 = 1")
 		return
 	}
 
