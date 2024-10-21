@@ -2,12 +2,18 @@ package pg
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func (db *DB) Transaction(ctx context.Context, readOnly ...bool) (tx *Tx, err error) {
+	if _, ok := ctx.(*Tx); ok {
+		// Todo: Fall back to savepoints?
+		return nil, errors.New("already in transaction")
+	}
+
 	conn, err := db.db.Acquire(ctx)
 
 	if err != nil {
@@ -35,9 +41,8 @@ func (db *DB) Transaction(ctx context.Context, readOnly ...bool) (tx *Tx, err er
 var _ context.Context = (*Tx)(nil)
 
 type Tx struct {
-	ctx    context.Context
-	conn   *pgxpool.Conn
-	closed bool
+	ctx  context.Context
+	conn *pgxpool.Conn
 }
 
 func (tx *Tx) Commit(ctx ...context.Context) (err error) {
@@ -57,13 +62,13 @@ func (tx *Tx) Rollback(ctx ...context.Context) (err error) {
 }
 
 func (tx *Tx) close(ctx context.Context, query string) (err error) {
-	if tx.closed {
+	if tx.conn == nil {
 		return
 	}
 
 	_, err = tx.conn.Exec(ctx, query)
 	tx.conn.Release()
-	tx.closed = true
+	tx.conn = nil
 	return
 }
 
