@@ -1,6 +1,7 @@
 package pg
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/webmafia/fast"
@@ -36,4 +37,19 @@ func Benchmark_encodeQuery2(b *testing.B) {
 		buf.Reset()
 		queryArgs = queryArgs[:0]
 	}
+}
+
+func Example_encodeQuery() {
+	buf := fast.NewStringBuffer(256)
+	queryArgs := make([]any, 0, 5)
+
+	err := encodeQuery(buf, "SELECT * FROM table WHERE foo = %[1]d AND bar != %[1]d AND baz != %d", []any{123, 456}, &queryArgs)
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(buf.String(), queryArgs)
+
+	// Output: SELECT * FROM table WHERE foo = $1 AND bar != $2 AND baz != $3 [123 123 456]
 }

@@ -1,6 +1,9 @@
 package pg
 
 import (
+	"errors"
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/webmafia/fast"
@@ -10,14 +13,11 @@ type QueryEncoder interface {
 	EncodeQuery(buf *fast.StringBuffer, queryArgs *[]any)
 }
 
-func encodeQuery(buf *fast.StringBuffer, format string, args []any, queryArgs *[]any) {
+func encodeQuery(buf *fast.StringBuffer, format string, args []any, queryArgs *[]any) (err error) {
 	var cursor int
+	var argNum int
 
 	for {
-		if len(args) == 0 {
-			break
-		}
-
 		i := strings.IndexByte(format[cursor:], '%')
 
 		if i < 0 {
@@ -35,14 +35,43 @@ func encodeQuery(buf *fast.StringBuffer, format string, args []any, queryArgs *[
 			continue
 		}
 
+		if format[i] == '[' {
+			end := strings.IndexByte(format[i:], ']')
+
+			if end < 0 {
+				return errors.New("missing ']'")
+			}
+
+			num, err := strconv.Atoi(format[i+1 : i+end])
+
+			if err != nil {
+				return err
+			}
+
+			if num < 1 {
+				return errors.New("argument number must be at least 1")
+			}
+
+			argNum = num
+			cursor += end + 1
+			i += end + 1
+		} else {
+			argNum++
+		}
+
+		if argNum > len(args) {
+			return fmt.Errorf("argument number %d does not exist", argNum)
+		}
+
 		c := format[i]
 
 		if ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') {
-			writeAny(buf, queryArgs, args[0])
-
-			args = args[1:]
+			writeAny(buf, queryArgs, args[argNum-1])
+		} else {
+			return fmt.Errorf("unsupported placeholder '%%%s'", string(c))
 		}
 	}
 
 	buf.WriteString(format[cursor:])
+	return
 }
