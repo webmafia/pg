@@ -14,14 +14,14 @@ type DB struct {
 func NewDB(db *pgxpool.Pool) *DB {
 	return &DB{
 		db: db,
-		instPool: fast.NewPool[inst](func(i *inst) {
+		instPool: fast.NewPool(func(i *inst) {
 			i.buf = fast.NewStringBuffer(256)
 			i.args = make([]any, 0, 5)
 		}, func(i *inst) {
 			i.buf.Reset()
 			i.args = i.args[:0]
 		}),
-		valPool: fast.NewPool[Values](func(v *Values) {
+		valPool: fast.NewPool(func(v *Values) {
 			v.columns = make([]string, 0, 5)
 			v.values = make([]any, 0, 5)
 		}, func(v *Values) {
