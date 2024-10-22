@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Query sends a query to the server and returns a Rows to read the results. Only errors encountered sending the query
@@ -21,57 +22,137 @@ import (
 // It is possible for a query to return one or more rows before encountering an error. In most cases the rows should be
 // collected before processing rather than processed while receiving each row. This avoids the possibility of the
 // application processing rows from a query that the server rejected. The CollectRows function is useful here.
-func (db *DB) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
-	inst := db.instPool.Acquire()
-	defer db.instPool.Release(inst)
+func (db *DB) Query(ctx context.Context, query string, args ...any) (rows pgx.Rows, err error) {
+	var (
+		conn          *pgxpool.Conn
+		inTransaction bool
+	)
 
-	encodeQuery(inst.buf, query, args, &inst.args)
-
-	return db.query(ctx, inst.buf.String(), inst.args...)
-}
-
-func (db *DB) query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
+	// If inside a transaction...
 	if tx, ok := ctx.(*Tx); ok {
-		return tx.conn.Query(ctx, query, args...)
+
+		// ...use the transaction's connection - and don't release it!
+		conn = tx.conn
+		inTransaction = true
+	} else {
+
+		// Otherwise, acquire a connection from the pool...
+		if conn, err = db.db.Acquire(ctx); err != nil {
+			return
+		}
+
+		// ...and release it once done.
+		defer conn.Release()
 	}
 
-	return db.db.Query(ctx, query, args...)
+	stmt, mem, err := db.prepare(ctx, conn, query, args)
+
+	if err != nil {
+		return
+	}
+
+	defer mem.reset()
+
+	if rows, err = conn.Query(ctx, stmt.Name, mem.args...); err != nil {
+		return
+	}
+
+	// The connection can't be released until the rows are closed, thus we need to wrap the returned rows
+	// and pass along the connection so that it can be released when done. However, if we're inside a transaction,
+	// we should NOT wrap it as we don't want to release the connection until the transaction is done.
+	if !inTransaction {
+		rows = &poolRows{r: rows, c: conn}
+	}
+
+	return
 }
 
 // QueryRow is a convenience wrapper over Query. Any error that occurs while querying is deferred
 // until calling Scan on the returned Row. That Row will error with ErrNoRows if no rows are returned.
-func (db *DB) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
-	inst := db.instPool.Acquire()
-	defer db.instPool.Release(inst)
+func (db *DB) QueryRow(ctx context.Context, query string, args ...any) (row pgx.Row) {
+	var (
+		conn          *pgxpool.Conn
+		inTransaction bool
+		err           error
+	)
 
-	encodeQuery(inst.buf, query, args, &inst.args)
-
-	return db.queryRow(ctx, inst.buf.String(), inst.args...)
-}
-
-func (db *DB) queryRow(ctx context.Context, query string, args ...any) pgx.Row {
+	// If inside a transaction...
 	if tx, ok := ctx.(*Tx); ok {
-		return tx.conn.QueryRow(ctx, query, args...)
+
+		// ...use the transaction's connection - and don't release it!
+		conn = tx.conn
+		inTransaction = true
+	} else {
+
+		// Otherwise, acquire a connection from the pool...
+		if conn, err = db.db.Acquire(ctx); err != nil {
+			return &poolRow{err: err}
+		}
+
+		// ...and release it once done.
+		defer conn.Release()
 	}
 
-	return db.db.QueryRow(ctx, query, args...)
-}
+	stmt, mem, err := db.prepare(ctx, conn, query, args)
 
-// Exec executes sql. sql can be either a prepared statement name or an SQL string. arguments should be referenced
-// positionally from the sql string as $1, $2, etc.
-func (db *DB) Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error) {
-	inst := db.instPool.Acquire()
-	defer db.instPool.Release(inst)
-
-	encodeQuery(inst.buf, query, args, &inst.args)
-
-	return db.exec(ctx, inst.buf.String(), inst.args...)
-}
-
-func (db *DB) exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error) {
-	if tx, ok := ctx.(*Tx); ok {
-		return tx.conn.Exec(ctx, query, args...)
+	if err != nil {
+		return &poolRow{err: err}
 	}
 
-	return db.db.Exec(ctx, query, args...)
+	defer mem.reset()
+
+	if row, err = conn.Query(ctx, stmt.Name, mem.args...); err != nil {
+		return &poolRow{err: err}
+	}
+
+	// The connection can't be released until the rows are closed, thus we need to wrap the returned rows
+	// and pass along the connection so that it can be released when done. However, if we're inside a transaction,
+	// we should NOT wrap it as we don't want to release the connection until the transaction is done.
+	if !inTransaction {
+		row = &poolRow{r: row, c: conn}
+	}
+
+	return
+}
+
+// Execute a query that doesn't return any rows. Arguments are passed in printf syntax.
+func (db *DB) Exec(ctx context.Context, query string, args ...any) (cmd pgconn.CommandTag, err error) {
+	var conn *pgxpool.Conn
+
+	// If inside a transaction...
+	if tx, ok := ctx.(*Tx); ok {
+
+		// ...use the transaction's connection - and don't release it!
+		conn = tx.conn
+	} else {
+
+		// Otherwise, acquire a connection from the pool...
+		if conn, err = db.db.Acquire(ctx); err != nil {
+			return
+		}
+
+		// ...and release it once done.
+		defer conn.Release()
+	}
+
+	stmt, mem, err := db.prepare(ctx, conn, query, args)
+
+	if err != nil {
+		return
+	}
+
+	defer mem.reset()
+
+	return conn.Exec(ctx, stmt.Name, mem.args...)
+}
+
+func (db *DB) prepare(ctx context.Context, conn *pgxpool.Conn, query string, args []any) (stmt *pgconn.StatementDescription, mem *connectionMemory, err error) {
+	c := conn.Conn()
+	mem = getConnMem(c)
+
+	if stmt, err = mem.stmt(ctx, c, query, args); err != nil {
+		mem.reset()
+	}
+
+	return
 }

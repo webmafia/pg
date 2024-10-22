@@ -3,6 +3,7 @@ module github.com/webmafia/pg
 go 1.21.3
 
 require (
+	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/webmafia/fast v0.10.0
 )

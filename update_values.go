@@ -9,40 +9,16 @@ func (db *DB) UpdateValues(ctx context.Context, table Identifier, vals *Values, 
 		return
 	}
 
-	inst := db.instPool.Acquire()
-	defer db.instPool.Release(inst)
+	cmd, err := db.Exec(ctx,
+		"UPDATE %T SET %T WHERE %T",
+		table,
+		vals,
+		cond,
+	)
 
-	db.updateValuesQuery(inst, table, vals, cond)
-
-	cmd, err := db.exec(ctx, inst.buf.String(), inst.args...)
-
-	if err != nil {
-		err = instError(err, inst)
-	} else {
-		count = cmd.RowsAffected()
+	if err == nil {
+		vals.reset()
 	}
 
-	vals.reset()
-
-	return
-}
-
-func (db *DB) updateValuesQuery(inst *inst, table Identifier, vals *Values, cond QueryEncoder) {
-	inst.buf.WriteString("UPDATE ")
-	table.EncodeString(inst.buf)
-	inst.buf.WriteString(" SET ")
-
-	for i := range vals.columns {
-		if i != 0 {
-			inst.buf.WriteString(", ")
-		}
-
-		writeIdentifier(inst.buf, vals.columns[i])
-		inst.buf.WriteString(" = ")
-		writeQueryArg(inst.buf, &inst.args, vals.values[i])
-	}
-
-	inst.buf.WriteString(" WHERE ")
-	cond.EncodeQuery(inst.buf, &inst.args)
-
+	return cmd.RowsAffected(), nil
 }

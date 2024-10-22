@@ -3,6 +3,8 @@ package pg
 import (
 	"context"
 	"slices"
+
+	"github.com/webmafia/fast"
 )
 
 func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, conflictColumns ...string) (count int64, err error) {
@@ -10,68 +12,52 @@ func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, 
 		return
 	}
 
-	inst := db.instPool.Acquire()
-	defer db.instPool.Release(inst)
+	cmd, err := db.Exec(ctx,
+		"INSERT INTO %T (%T) VALUES(%T) %T",
+		table,
+		vals.colEncoder(),
+		vals.valEncoder(),
+		conflictingColumns(vals, conflictColumns),
+	)
 
-	db.insertValuesQuery(inst, table, vals, conflictColumns)
-
-	cmd, err := db.exec(ctx, inst.buf.String(), inst.args...)
-
-	if err != nil {
-		err = instError(err, inst)
-	} else {
-		count = cmd.RowsAffected()
+	if err == nil {
+		vals.reset()
 	}
 
-	vals.reset()
-
-	return
+	return cmd.RowsAffected(), nil
 }
 
-func (db *DB) insertValuesQuery(inst *inst, table Identifier, vals *Values, conflictColumns []string) {
-	inst.buf.WriteString("INSERT INTO ")
-	table.EncodeString(inst.buf)
-	inst.buf.WriteString(" (")
-	writeIdentifiers(inst.buf, vals.columns)
-	inst.buf.WriteString(") VALUES(")
-
-	for i := range vals.values {
-		if i != 0 {
-			inst.buf.WriteByte(',')
+func conflictingColumns(vals *Values, cols []string) EncodeQuery {
+	return func(buf *fast.StringBuffer, queryArgs *[]any) {
+		if len(cols) == 0 {
+			return
 		}
 
-		writeQueryArg(inst.buf, &inst.args, vals.values[i])
-	}
-
-	inst.buf.WriteByte(')')
-
-	if len(conflictColumns) > 0 {
-		inst.buf.WriteByte('\n')
-		inst.buf.WriteString("ON CONFLICT (")
-		writeIdentifiers(inst.buf, conflictColumns)
-		inst.buf.WriteString(") ")
+		buf.WriteString("ON CONFLICT (")
+		writeIdentifiers(buf, cols)
+		buf.WriteString(") ")
 
 		var written bool
 
 		for i := range vals.columns {
-			if slices.Contains(conflictColumns, vals.columns[i]) {
+			if slices.Contains(cols, vals.columns[i]) {
 				continue
 			}
 
 			if written {
-				inst.buf.WriteString(", ")
+				buf.WriteString(", ")
 			} else {
-				inst.buf.WriteString("DO UPDATE SET ")
+				buf.WriteString("DO UPDATE SET ")
 				written = true
 			}
 
-			writeIdentifier(inst.buf, vals.columns[i])
-			inst.buf.WriteString(" = EXCLUDED.")
-			writeIdentifier(inst.buf, vals.columns[i])
+			writeIdentifier(buf, vals.columns[i])
+			buf.WriteString(" = EXCLUDED.")
+			writeIdentifier(buf, vals.columns[i])
 		}
 
 		if !written {
-			inst.buf.WriteString("DO NOTHING")
+			buf.WriteString("DO NOTHING")
 		}
 	}
 }

@@ -13,6 +13,14 @@ type QueryEncoder interface {
 	EncodeQuery(buf *fast.StringBuffer, queryArgs *[]any)
 }
 
+var _ QueryEncoder = (EncodeQuery)(nil)
+
+type EncodeQuery func(buf *fast.StringBuffer, queryArgs *[]any)
+
+func (fn EncodeQuery) EncodeQuery(buf *fast.StringBuffer, queryArgs *[]any) {
+	fn(buf, queryArgs)
+}
+
 func encodeQuery(buf *fast.StringBuffer, format string, args []any, queryArgs *[]any) (err error) {
 	var cursor int
 	var argNum int

@@ -15,18 +15,6 @@ type Error struct {
 	args  []any
 }
 
-func instError(err error, inst *inst) Error {
-	e := Error{
-		err:   err,
-		query: string(inst.buf.Bytes()),
-		args:  make([]any, len(inst.args)),
-	}
-
-	copy(e.args, inst.args)
-
-	return e
-}
-
 func (err Error) Error() string {
 	return err.err.Error()
 }
