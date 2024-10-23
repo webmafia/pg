@@ -25,6 +25,9 @@ func New(ctx context.Context, connString string, alterConfig ...func(*pgxpool.Co
 	}
 
 	oldBeforeConnect := config.BeforeConnect
+	oldAfterRelease := config.AfterRelease
+	oldBeforeClose := config.BeforeClose
+
 	config.BeforeConnect = func(ctx context.Context, cc *pgx.ConnConfig) error {
 
 		if oldBeforeConnect != nil {
@@ -37,6 +40,24 @@ func New(ctx context.Context, connString string, alterConfig ...func(*pgxpool.Co
 		cc.StatementCacheCapacity = 0
 
 		return nil
+	}
+
+	config.AfterRelease = func(c *pgx.Conn) bool {
+		resetConnMem(c)
+
+		if oldAfterRelease != nil {
+			return oldAfterRelease(c)
+		}
+
+		return true
+	}
+
+	config.BeforeClose = func(c *pgx.Conn) {
+		purgeConnMem(c)
+
+		if oldBeforeClose != nil {
+			oldBeforeClose(c)
+		}
 	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
