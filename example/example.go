@@ -16,15 +16,18 @@ func example(ctx context.Context) (err error) {
 
 	defer db.Close()
 
-	if _, err = db.Exec(ctx, `INSERT INTO %T ("name") VALUES(%T)`, pg.Identifier("test"), "a"); err != nil {
+	vals := db.AcquireValues()
+	defer db.ReleaseValues(vals)
+
+	if _, err = db.InsertValues(ctx, pg.Identifier("test"), vals.Value("name", "x")); err != nil {
 		return
 	}
 
-	if _, err = db.Exec(ctx, `INSERT INTO %T ("name") VALUES(%T)`, pg.Identifier("test"), "b"); err != nil {
+	if _, err = db.InsertValues(ctx, pg.Identifier("test"), vals.Value("name", "y")); err != nil {
 		return
 	}
 
-	if _, err = db.Exec(ctx, `INSERT INTO %T ("name") VALUES(%T)`, pg.Identifier("test"), "c"); err != nil {
+	if _, err = db.InsertValues(ctx, pg.Identifier("test"), vals.Value("name", "x")); err != nil {
 		return
 	}
 
