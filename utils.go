@@ -29,7 +29,7 @@ func writeQueryArg(b *fast.StringBuffer, args *[]any, val any) {
 func writeAny(b *fast.StringBuffer, args *[]any, val any) {
 	switch v := val.(type) {
 
-	case fast.StringEncoder:
+	case StringEncoder:
 		v.EncodeString(b)
 
 	case QueryEncoder:

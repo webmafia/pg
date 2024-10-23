@@ -41,7 +41,7 @@ func In(col string, val any) QueryEncoder {
 
 		switch v := val.(type) {
 
-		case fast.StringEncoder:
+		case StringEncoder:
 			buf.WriteString(" IN (")
 			v.EncodeString(buf)
 			buf.WriteByte(')')
@@ -68,7 +68,7 @@ func NotIn(col string, val any) QueryEncoder {
 
 		switch v := val.(type) {
 
-		case fast.StringEncoder:
+		case StringEncoder:
 			buf.WriteString(" NOT IN (")
 			v.EncodeString(buf)
 			buf.WriteByte(')')

@@ -2,11 +2,11 @@ package pg
 
 import "github.com/webmafia/fast"
 
-var _ fast.StringEncoder = Identifier("")
+var _ StringEncoder = Identifier("")
 
 type Identifier string
 
-// EncodeString implements fast.StringEncoder.
+// EncodeString implements StringEncoder.
 func (t Identifier) EncodeString(b *fast.StringBuffer) {
 	b.WriteByte('"')
 	b.WriteString(string(t))
