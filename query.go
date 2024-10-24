@@ -36,13 +36,10 @@ func (db *DB) Query(ctx context.Context, query string, args ...any) (rows pgx.Ro
 		inTransaction = true
 	} else {
 
-		// Otherwise, acquire a connection from the pool...
+		// Otherwise, acquire a connection from the pool - but don't release it!
 		if conn, err = db.db.Acquire(ctx); err != nil {
 			return
 		}
-
-		// ...and release it once done.
-		defer conn.Release()
 	}
 
 	stmt, mem, err := db.prepare(ctx, conn, query, args)
@@ -84,13 +81,10 @@ func (db *DB) QueryRow(ctx context.Context, query string, args ...any) (row pgx.
 		inTransaction = true
 	} else {
 
-		// Otherwise, acquire a connection from the pool...
+		// Otherwise, acquire a connection from the pool - but don't release it!
 		if conn, err = db.db.Acquire(ctx); err != nil {
 			return &poolRow{err: err}
 		}
-
-		// ...and release it once done.
-		defer conn.Release()
 	}
 
 	stmt, mem, err := db.prepare(ctx, conn, query, args)
