@@ -95,9 +95,7 @@ func (db *DB) QueryRow(ctx context.Context, query string, args ...any) (row pgx.
 
 	defer mem.reset()
 
-	if row, err = conn.Query(ctx, stmt.Name, mem.args...); err != nil {
-		return &poolRow{err: err}
-	}
+	row = conn.QueryRow(ctx, stmt.Name, mem.args...)
 
 	// The connection can't be released until the rows are closed, thus we need to wrap the returned rows
 	// and pass along the connection so that it can be released when done. However, if we're inside a transaction,
