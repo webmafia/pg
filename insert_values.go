@@ -22,9 +22,10 @@ func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, 
 
 	if err == nil {
 		vals.reset()
+		count = cmd.RowsAffected()
 	}
 
-	return cmd.RowsAffected(), nil
+	return
 }
 
 func conflictingColumns(vals *Values, cols []string) EncodeQuery {

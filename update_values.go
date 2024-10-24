@@ -18,7 +18,8 @@ func (db *DB) UpdateValues(ctx context.Context, table Identifier, vals *Values, 
 
 	if err == nil {
 		vals.reset()
+		count = cmd.RowsAffected()
 	}
 
-	return cmd.RowsAffected(), nil
+	return
 }
