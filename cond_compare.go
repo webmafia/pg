@@ -56,9 +56,6 @@ func In(col string, val any) QueryEncoder {
 			writeQueryArg(buf, queryArgs, val)
 			buf.WriteByte(')')
 		}
-
-		buf.WriteString(" ")
-		writeQueryArg(buf, queryArgs, val)
 	})
 }
 
