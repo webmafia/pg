@@ -16,3 +16,7 @@ func (t ChainedIdentifier) EncodeString(b *fast.StringBuffer) {
 func (t ChainedIdentifier) Col(col string) ChainedIdentifier {
 	return ChainedIdentifier{t, Identifier(col)}
 }
+
+func (t ChainedIdentifier) Alias(col string) Alias {
+	return Alias{t[1], Identifier(col)}
+}
