@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/webmafia/fast"
-	"github.com/webmafia/pg/internal/lru"
+	"github.com/webmafia/lru"
 )
 
 const connDataKey = "github.com/webmafia/pg"
@@ -17,7 +17,7 @@ type connectionMemory struct {
 	buf   *fast.StringBuffer
 	args  []any
 	hash  xxhash.Digest
-	stmts *lru.Cache[uint64, *pgconn.StatementDescription]
+	stmts lru.LRU[uint64, *pgconn.StatementDescription]
 	clean bool
 }
 
@@ -49,7 +49,7 @@ func getConnMem(conn *pgx.Conn) *connectionMemory {
 	c := &connectionMemory{
 		buf:  fast.NewStringBuffer(256),
 		args: make([]any, 0, 4),
-		stmts: lru.NewCache(128, func(_ uint64, stmt *pgconn.StatementDescription) {
+		stmts: lru.New(128, func(_ uint64, stmt *pgconn.StatementDescription) {
 			conn.Deallocate(context.Background(), stmt.Name)
 		}),
 	}

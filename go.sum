@@ -20,6 +20,8 @@ github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKs
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/webmafia/fast v0.10.0 h1:eAnvwkLgOJijnBx39lTkY/qu5NxlMh2B1fA0Vdbwr4k=
 github.com/webmafia/fast v0.10.0/go.mod h1:huJN6MVve9MkiXpAzyuyd0UGhTXt3B/lukYR2/Zu0/Q=
+github.com/webmafia/lru v1.0.0 h1:kfJmEXR++CZQTVxpGd93b/ZDTgD61vGj2Qu2JFOJ/98=
+github.com/webmafia/lru v1.0.0/go.mod h1:0p2Dec7T8gGxW4ezVjjtYHHktOZrlCfY2ZRRkbjIVj8=
 golang.org/x/crypto v0.27.0 h1:GXm2NjJrPaiv/h1tb2UH8QfgC/hOf/+z0p6PT8o1w7A=
 golang.org/x/crypto v0.27.0/go.mod h1:1Xngt8kV6Dvbssa53Ziq6Eqn0HqbZi5Z6R0ZpwQzt70=
 golang.org/x/sync v0.8.0 h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ=

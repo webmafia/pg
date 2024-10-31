@@ -6,6 +6,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/webmafia/fast v0.10.0
+	github.com/webmafia/lru v1.0.0
 )
 
 require (
