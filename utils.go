@@ -9,6 +9,16 @@ func writeIdentifier(b *fast.StringBuffer, str string) {
 	b.WriteByte('"')
 }
 
+//go:inline
+func writeAnyIdentifier(b *fast.StringBuffer, str any) {
+	switch v := str.(type) {
+	case StringEncoder:
+		v.EncodeString(b)
+	case string:
+		writeIdentifier(b, v)
+	}
+}
+
 func writeIdentifiers(b *fast.StringBuffer, strs []string) {
 	for i := range strs {
 		if i != 0 {

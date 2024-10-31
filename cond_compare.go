@@ -3,41 +3,41 @@ package pg
 import "github.com/webmafia/fast"
 
 //go:inline
-func op(col, op string, val any) QueryEncoder {
+func op(col any, op string, val any) QueryEncoder {
 	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
-		writeIdentifier(buf, col)
+		writeAnyIdentifier(buf, col)
 		buf.WriteString(op)
 		writeAny(buf, queryArgs, val)
 	})
 }
 
-func Eq(col string, val any) QueryEncoder {
+func Eq(col any, val any) QueryEncoder {
 	return op(col, " = ", val)
 }
 
-func NotEq(col string, val any) QueryEncoder {
+func NotEq(col any, val any) QueryEncoder {
 	return op(col, " != ", val)
 }
 
-func Gt(col string, val any) QueryEncoder {
+func Gt(col any, val any) QueryEncoder {
 	return op(col, " > ", val)
 }
 
-func Gte(col string, val any) QueryEncoder {
+func Gte(col any, val any) QueryEncoder {
 	return op(col, " >= ", val)
 }
 
-func Lt(col string, val any) QueryEncoder {
+func Lt(col any, val any) QueryEncoder {
 	return op(col, " < ", val)
 }
 
-func Lte(col string, val any) QueryEncoder {
+func Lte(col any, val any) QueryEncoder {
 	return op(col, " <= ", val)
 }
 
-func In(col string, val any) QueryEncoder {
+func In(col any, val any) QueryEncoder {
 	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
-		writeIdentifier(buf, col)
+		writeAnyIdentifier(buf, col)
 
 		switch v := val.(type) {
 
@@ -59,9 +59,9 @@ func In(col string, val any) QueryEncoder {
 	})
 }
 
-func NotIn(col string, val any) QueryEncoder {
+func NotIn(col any, val any) QueryEncoder {
 	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
-		writeIdentifier(buf, col)
+		writeAnyIdentifier(buf, col)
 
 		switch v := val.(type) {
 

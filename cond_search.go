@@ -17,7 +17,7 @@ func (opt *SearchOptions) setDefaults() {
 	}
 }
 
-func Search(col, val string, options ...SearchOptions) QueryEncoder {
+func Search(col any, val string, options ...SearchOptions) QueryEncoder {
 	var opt SearchOptions
 
 	if len(options) > 0 {
@@ -31,7 +31,7 @@ func Search(col, val string, options ...SearchOptions) QueryEncoder {
 	}
 
 	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
-		writeIdentifier(buf, col)
+		writeAnyIdentifier(buf, col)
 		buf.WriteString(" @@ to_tsquery('")
 		buf.WriteString(opt.Dictionary)
 		buf.WriteString("', ")

@@ -12,3 +12,7 @@ func (t Identifier) EncodeString(b *fast.StringBuffer) {
 	b.WriteString(string(t))
 	b.WriteByte('"')
 }
+
+func (t Identifier) Col(col string) ChainedIdentifier {
+	return ChainedIdentifier{t, Identifier(col)}
+}
