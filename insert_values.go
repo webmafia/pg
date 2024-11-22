@@ -7,9 +7,17 @@ import (
 	"github.com/webmafia/fast"
 )
 
-func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, conflictColumns ...string) (count int64, err error) {
+type InsertOption func(vals *Values) EncodeQuery
+
+func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, options ...InsertOption) (count int64, err error) {
 	if vals.Empty() {
 		return
+	}
+
+	var upsert EncodeQuery
+
+	if len(options) > 0 && options[0] != nil {
+		upsert = options[0](vals)
 	}
 
 	cmd, err := db.Exec(ctx,
@@ -17,7 +25,7 @@ func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, 
 		table,
 		vals.colEncoder(),
 		vals.valEncoder(),
-		conflictingColumns(vals, conflictColumns),
+		upsert,
 	)
 
 	if err == nil {
@@ -28,37 +36,43 @@ func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, 
 	return
 }
 
-func conflictingColumns(vals *Values, cols []string) EncodeQuery {
-	return func(buf *fast.StringBuffer, queryArgs *[]any) {
-		if len(cols) == 0 {
-			return
-		}
-
-		buf.WriteString("ON CONFLICT (")
-		writeIdentifier(buf, cols[0])
-		buf.WriteString(") ")
-
-		var written bool
-
-		for i := range vals.columns {
-			if slices.Contains(cols, vals.columns[i]) {
-				continue
+func Upsert(numConflictingColumns int, ignoreColumns ...string) InsertOption {
+	return func(vals *Values) EncodeQuery {
+		return func(buf *fast.StringBuffer, queryArgs *[]any) {
+			if len(ignoreColumns) == 0 {
+				return
 			}
 
-			if written {
-				buf.WriteString(", ")
-			} else {
-				buf.WriteString("DO UPDATE SET ")
-				written = true
+			if numConflictingColumns <= 0 || numConflictingColumns > len(ignoreColumns) {
+				numConflictingColumns = len(ignoreColumns)
 			}
 
-			writeIdentifier(buf, vals.columns[i])
-			buf.WriteString(" = EXCLUDED.")
-			writeIdentifier(buf, vals.columns[i])
-		}
+			buf.WriteString("ON CONFLICT (")
+			writeIdentifiers(buf, ignoreColumns[:numConflictingColumns])
+			buf.WriteString(") ")
 
-		if !written {
-			buf.WriteString("DO NOTHING")
+			var written bool
+
+			for i := range vals.columns {
+				if slices.Contains(ignoreColumns, vals.columns[i]) {
+					continue
+				}
+
+				if written {
+					buf.WriteString(", ")
+				} else {
+					buf.WriteString("DO UPDATE SET ")
+					written = true
+				}
+
+				writeIdentifier(buf, vals.columns[i])
+				buf.WriteString(" = EXCLUDED.")
+				writeIdentifier(buf, vals.columns[i])
+			}
+
+			if !written {
+				buf.WriteString("DO NOTHING")
+			}
 		}
 	}
 }

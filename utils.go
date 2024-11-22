@@ -40,10 +40,14 @@ func writeAny(b *fast.StringBuffer, args *[]any, val any) {
 	switch v := val.(type) {
 
 	case StringEncoder:
-		v.EncodeString(b)
+		if v != nil {
+			v.EncodeString(b)
+		}
 
 	case QueryEncoder:
-		v.EncodeQuery(b, args)
+		if v != nil {
+			v.EncodeQuery(b, args)
+		}
 
 	default:
 		writeQueryArg(b, args, val)
