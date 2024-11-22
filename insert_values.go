@@ -35,7 +35,7 @@ func conflictingColumns(vals *Values, cols []string) EncodeQuery {
 		}
 
 		buf.WriteString("ON CONFLICT (")
-		writeIdentifiers(buf, cols)
+		writeIdentifier(buf, cols[0])
 		buf.WriteString(") ")
 
 		var written bool
