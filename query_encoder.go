@@ -21,6 +21,8 @@ func (fn EncodeQuery) EncodeQuery(buf *fast.StringBuffer, queryArgs *[]any) {
 	fn(buf, queryArgs)
 }
 
+var queryEncoderNoop = EncodeQuery(func(_ *fast.StringBuffer, _ *[]any) {})
+
 func encodeQuery(buf *fast.StringBuffer, format string, args []any, queryArgs *[]any) (err error) {
 	var cursor int
 	var argNum int

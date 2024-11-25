@@ -18,8 +18,8 @@ func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, 
 		return
 	}
 
-	var onConflict EncodeQuery
-	var returning QueryEncoder
+	var onConflict QueryEncoder = queryEncoderNoop
+	var returning QueryEncoder = queryEncoderNoop
 
 	if len(options) > 0 {
 		if options[0].OnConflict != nil {

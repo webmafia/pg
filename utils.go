@@ -1,6 +1,8 @@
 package pg
 
-import "github.com/webmafia/fast"
+import (
+	"github.com/webmafia/fast"
+)
 
 //go:inline
 func writeIdentifier(b *fast.StringBuffer, str string) {
