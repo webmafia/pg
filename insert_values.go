@@ -7,36 +7,68 @@ import (
 	"github.com/webmafia/fast"
 )
 
-type InsertOption func(vals *Values) EncodeQuery
+type InsertOptions struct {
+	OnConflict   func(vals *Values) EncodeQuery
+	ReturnColumn string
+	ReturnDst    any // A pointer that ReturnColumn should be scanned to
+}
 
-func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, options ...InsertOption) (count int64, err error) {
+func (db *DB) InsertValues(ctx context.Context, table Identifier, vals *Values, options ...InsertOptions) (count int64, err error) {
 	if vals.Empty() {
 		return
 	}
 
-	var upsert EncodeQuery
+	var onConflict EncodeQuery
+	var returning QueryEncoder
 
-	if len(options) > 0 && options[0] != nil {
-		upsert = options[0](vals)
+	if len(options) > 0 {
+		if options[0].OnConflict != nil {
+			onConflict = options[0].OnConflict(vals)
+		}
+
+		if options[0].ReturnColumn != "" {
+			returning = Raw("RETURNING %v", Identifier(options[0].ReturnColumn))
+		}
 	}
 
-	cmd, err := db.Exec(ctx,
-		"INSERT INTO %T (%T) VALUES(%T) %T",
-		table,
-		vals.colEncoder(),
-		vals.valEncoder(),
-		upsert,
-	)
+	if len(options) > 0 && options[0].ReturnDst != nil {
+		row := db.QueryRow(ctx,
+			"INSERT INTO %T (%T) VALUES(%T) %T %T",
+			table,
+			vals.colEncoder(),
+			vals.valEncoder(),
+			onConflict,
+			returning,
+		)
 
-	if err == nil {
-		vals.reset()
+		if err = row.Scan(options[0].ReturnDst); err != nil {
+			return
+		}
+
+		count = 1
+	} else {
+		cmd, err := db.Exec(ctx,
+			"INSERT INTO %T (%T) VALUES(%T) %T %T",
+			table,
+			vals.colEncoder(),
+			vals.valEncoder(),
+			onConflict,
+			returning,
+		)
+
+		if err != nil {
+			return 0, err
+		}
+
 		count = cmd.RowsAffected()
 	}
+
+	vals.reset()
 
 	return
 }
 
-func Upsert(numConflictingColumns int, ignoreColumns ...string) InsertOption {
+func DoUpdate(numConflictingColumns int, ignoreColumns ...string) func(vals *Values) EncodeQuery {
 	return func(vals *Values) EncodeQuery {
 		return func(buf *fast.StringBuffer, queryArgs *[]any) {
 			if len(ignoreColumns) == 0 {
