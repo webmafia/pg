@@ -2,7 +2,7 @@ package pg
 
 import "github.com/webmafia/fast"
 
-func Order(column string, order ...string) QueryEncoder {
+func Order(column any, order ...string) QueryEncoder {
 	return orderBy{
 		column: column,
 		desc:   len(order) > 0 && (order[0] == "desc" || order[0] == "DESC"),
@@ -10,13 +10,13 @@ func Order(column string, order ...string) QueryEncoder {
 }
 
 type orderBy struct {
-	column string
+	column any
 	desc   bool
 }
 
 // EncodeString implements fast.StringEncoder.
 func (o orderBy) EncodeQuery(buf *fast.StringBuffer, queryArgs *[]any) {
-	writeQueryArg(buf, queryArgs, o.column)
+	writeAnyIdentifier(buf, o.column)
 
 	if o.desc {
 		buf.WriteString(" DESC")
