@@ -114,20 +114,36 @@ func (tx *Tx) release() {
 
 // Deadline implements context.Context.
 func (tx *Tx) Deadline() (deadline time.Time, ok bool) {
+	if tx.ctx == nil {
+		return
+	}
+
 	return tx.ctx.Deadline()
 }
 
 // Done implements context.Context.
 func (tx *Tx) Done() <-chan struct{} {
+	if tx.ctx == nil {
+		return closedChannel
+	}
+
 	return tx.ctx.Done()
 }
 
 // Err implements context.Context.
 func (tx *Tx) Err() error {
+	if tx.ctx == nil {
+		return context.Canceled
+	}
+
 	return tx.ctx.Err()
 }
 
 // Value implements context.Context.
 func (tx *Tx) Value(key any) any {
+	if tx.ctx == nil {
+		return nil
+	}
+
 	return tx.ctx.Value(key)
 }

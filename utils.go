@@ -4,6 +4,13 @@ import (
 	"github.com/webmafia/fast"
 )
 
+var closedChannel chan struct{}
+
+func init() {
+	closedChannel = make(chan struct{})
+	close(closedChannel)
+}
+
 //go:inline
 func writeIdentifier(b *fast.StringBuffer, str string) {
 	b.WriteByte('"')
