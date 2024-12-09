@@ -29,7 +29,7 @@ func (db *DB) Query(ctx context.Context, query string, args ...any) (rows pgx.Ro
 	)
 
 	// If inside a transaction...
-	if tx, ok := ctx.(*Tx); ok {
+	if tx, ok := ctx.(*Tx); ok && tx.conn != nil {
 
 		// ...use the transaction's connection - and don't release it!
 		conn = tx.conn
@@ -74,7 +74,7 @@ func (db *DB) QueryRow(ctx context.Context, query string, args ...any) (row pgx.
 	)
 
 	// If inside a transaction...
-	if tx, ok := ctx.(*Tx); ok {
+	if tx, ok := ctx.(*Tx); ok && tx.conn != nil {
 
 		// ...use the transaction's connection - and don't release it!
 		conn = tx.conn
@@ -112,7 +112,7 @@ func (db *DB) Exec(ctx context.Context, query string, args ...any) (cmd pgconn.C
 	var conn *pgxpool.Conn
 
 	// If inside a transaction...
-	if tx, ok := ctx.(*Tx); ok {
+	if tx, ok := ctx.(*Tx); ok && tx.conn != nil {
 
 		// ...use the transaction's connection - and don't release it!
 		conn = tx.conn
