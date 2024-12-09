@@ -94,7 +94,7 @@ func (tx *Tx) Release(ctx ...context.Context) (err error) {
 }
 
 func (tx *Tx) close(ctx context.Context, query ...string) (err error) {
-	if tx.closed {
+	if tx.closed || tx.conn == nil {
 		return
 	}
 
