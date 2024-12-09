@@ -85,7 +85,12 @@ func newDB(db *pgxpool.Pool) *DB {
 		tx.db = d
 	}, func(tx *Tx) {
 		if tx.conn != nil {
-			tx.conn.Release()
+
+			// Release the connection if this wasn't just a savepoint
+			if !tx.sp {
+				tx.conn.Release()
+			}
+
 			tx.conn = nil
 		}
 
