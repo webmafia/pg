@@ -8,31 +8,30 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+var ErrReleasedTransaction = errors.New("tried to operate on a released transaction")
+
+const savepointName = "pseudo_tx"
+
 func (db *DB) Transaction(ctx context.Context, readOnly ...bool) (tx *Tx, err error) {
-	if _, ok := ctx.(*Tx); ok {
-		// Todo: Fall back to savepoints?
-		return nil, errors.New("already in transaction")
-	}
+	tx = db.txPool.Acquire()
+	tx.ctx = ctx
 
-	conn, err := db.db.Acquire(ctx)
-
-	if err != nil {
+	if parent, ok := ctx.(*Tx); ok {
+		tx.conn = parent.conn
+		tx.sp = true
+	} else if tx.conn, err = db.db.Acquire(ctx); err != nil {
+		tx.release()
 		return
 	}
 
-	if len(readOnly) > 0 && readOnly[0] {
-		if _, err = conn.Exec(ctx, "BEGIN READ ONLY"); err != nil {
-			return
-		}
-	} else {
-		if _, err = conn.Exec(ctx, "BEGIN"); err != nil {
-			return
-		}
+	var ro bool
+
+	if len(readOnly) > 0 {
+		ro = readOnly[0]
 	}
 
-	tx = &Tx{
-		ctx:  ctx,
-		conn: conn,
+	if err = tx.begin(ctx, ro); err != nil {
+		tx.release()
 	}
 
 	return
@@ -41,35 +40,76 @@ func (db *DB) Transaction(ctx context.Context, readOnly ...bool) (tx *Tx, err er
 var _ context.Context = (*Tx)(nil)
 
 type Tx struct {
-	ctx  context.Context
-	conn *pgxpool.Conn
+	ctx    context.Context
+	db     *DB
+	conn   *pgxpool.Conn
+	sp     bool
+	closed bool
+}
+
+func (tx *Tx) begin(ctx context.Context, readOnly bool) (err error) {
+	if tx.sp {
+		_, err = tx.conn.Exec(ctx, "SAVEPOINT "+savepointName)
+	} else if readOnly {
+		_, err = tx.conn.Exec(ctx, "BEGIN READ ONLY")
+	} else {
+		_, err = tx.conn.Exec(ctx, "BEGIN")
+	}
+
+	return
 }
 
 func (tx *Tx) Commit(ctx ...context.Context) (err error) {
-	if len(ctx) > 0 {
-		return tx.close(ctx[0], "COMMIT")
+	if tx.closed {
+		return ErrReleasedTransaction
 	}
 
-	return tx.close(tx.ctx, "COMMIT")
-}
+	c := tx.ctx
 
-func (tx *Tx) Rollback(ctx ...context.Context) (err error) {
 	if len(ctx) > 0 {
-		return tx.close(ctx[0], "ROLLBACK")
+		c = ctx[0]
 	}
 
-	return tx.close(tx.ctx, "ROLLBACK")
+	if tx.sp {
+		return tx.close(c, "RELEASE SAVEPOINT "+savepointName)
+	}
+
+	return tx.close(c, "COMMIT")
 }
 
-func (tx *Tx) close(ctx context.Context, query string) (err error) {
-	if tx.conn == nil {
+func (tx *Tx) Release(ctx ...context.Context) (err error) {
+	defer tx.release()
+
+	c := tx.ctx
+
+	if len(ctx) > 0 {
+		c = ctx[0]
+	}
+
+	if tx.sp {
+		return tx.close(c, "ROLLBACK TO SAVEPOINT "+savepointName, "RELEASE SAVEPOINT "+savepointName)
+	}
+
+	return tx.close(c, "ROLLBACK")
+}
+
+func (tx *Tx) close(ctx context.Context, query ...string) (err error) {
+	if tx.closed {
 		return
 	}
 
-	_, err = tx.conn.Exec(ctx, query)
-	tx.conn.Release()
-	tx.conn = nil
+	for i := range query {
+		if _, err = tx.conn.Exec(ctx, query[i]); err != nil {
+			return
+		}
+	}
+
+	tx.closed = true
 	return
+}
+
+func (tx *Tx) release() {
+	tx.db.txPool.Release(tx)
 }
 
 // Deadline implements context.Context.

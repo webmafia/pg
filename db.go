@@ -11,6 +11,7 @@ import (
 type DB struct {
 	db      *pgxpool.Pool
 	valPool *fast.Pool[Values]
+	txPool  *fast.Pool[Tx]
 }
 
 func New(ctx context.Context, connString string, alterConfig ...func(*pgxpool.Config)) (db *DB, err error) {
@@ -70,7 +71,7 @@ func New(ctx context.Context, connString string, alterConfig ...func(*pgxpool.Co
 }
 
 func newDB(db *pgxpool.Pool) *DB {
-	return &DB{
+	d := &DB{
 		db: db,
 		valPool: fast.NewPool(func(v *Values) {
 			v.columns = make([]string, 0, 8)
@@ -79,6 +80,21 @@ func newDB(db *pgxpool.Pool) *DB {
 			v.reset()
 		}),
 	}
+
+	d.txPool = fast.NewPool(func(tx *Tx) {
+		tx.db = d
+	}, func(tx *Tx) {
+		if tx.conn != nil {
+			tx.conn.Release()
+			tx.conn = nil
+		}
+
+		tx.ctx = nil
+		tx.sp = false
+		tx.closed = false
+	})
+
+	return d
 }
 
 func (db *DB) Close() {
