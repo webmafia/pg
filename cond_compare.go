@@ -85,3 +85,25 @@ func NotIn(col any, val any) QueryEncoder {
 		writeQueryArg(buf, queryArgs, val)
 	})
 }
+
+// Prefix LIKE match. Optionally search on suffix as well.
+func Like(col any, val string, alsoSuffix ...bool) QueryEncoder {
+	if len(alsoSuffix) > 0 && alsoSuffix[0] {
+		val = "%" + val + "%"
+	} else {
+		val += "%"
+	}
+
+	return op(col, " LIKE ", val)
+}
+
+// Negative prefix LIKE match. Optionally search on suffix as well.
+func NotLike(col any, val string, alsoSuffix ...bool) QueryEncoder {
+	if len(alsoSuffix) > 0 && alsoSuffix[0] {
+		val = "%" + val + "%"
+	} else {
+		val += "%"
+	}
+
+	return op(col, " NOT LIKE ", val)
+}
