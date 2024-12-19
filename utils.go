@@ -1,6 +1,8 @@
 package pg
 
 import (
+	"strings"
+
 	"github.com/webmafia/fast"
 )
 
@@ -24,6 +26,14 @@ func writeAnyIdentifier(b *fast.StringBuffer, str any) {
 	case StringEncoder:
 		v.EncodeString(b)
 	case string:
+		dot := strings.IndexByte(v, '.')
+
+		if dot >= 0 {
+			writeIdentifier(b, v[:dot])
+			b.WriteByte('.')
+			v = v[dot+1:]
+		}
+
 		writeIdentifier(b, v)
 	}
 }
