@@ -40,7 +40,7 @@ func Search(col any, val string, options ...SearchOptions) QueryEncoder {
 	})
 }
 
-func PrefixSearch(str string) string {
+func PrefixSearch(str string, anyWord ...bool) string {
 	var buf strings.Builder
 	// Pre-allocate to avoid more than one allocation,
 	// Estimation might not be perfect due to escaping, but it avoids gross underestimation.
@@ -64,7 +64,11 @@ func PrefixSearch(str string) string {
 
 		// If starting a new word, add a space if it's not the first word
 		if !inWord && buf.Len() > 0 {
-			buf.WriteString(" & ")
+			if len(anyWord) > 0 && anyWord[0] {
+				buf.WriteString(" | ")
+			} else {
+				buf.WriteString(" & ")
+			}
 		}
 		inWord = true // We are now in a word
 
