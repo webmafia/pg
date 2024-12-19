@@ -16,16 +16,33 @@ type MultiOr interface {
 
 func And(ops ...QueryEncoder) MultiAnd {
 	return &multi{
-		ops: ops,
-		del: " AND ",
+		ops:  ops,
+		del:  " AND ",
+		cond: true,
 	}
 }
 
 func Or(ops ...QueryEncoder) MultiOr {
 	return &multi{
-		ops: ops,
-		del: " OR ",
+		ops:  ops,
+		del:  " OR ",
+		cond: true,
 	}
+}
+
+// Merges multiple QueryEncoders to a single QueryEncoder, with an optional delimiter (default newline).
+func Multi(ops []QueryEncoder, del ...string) QueryEncoder {
+	m := &multi{
+		ops: ops,
+	}
+
+	if len(del) > 0 {
+		m.del = del[0]
+	} else {
+		m.del = "\n"
+	}
+
+	return m
 }
 
 var (
@@ -34,8 +51,9 @@ var (
 )
 
 type multi struct {
-	ops []QueryEncoder
-	del string
+	ops  []QueryEncoder
+	del  string
+	cond bool
 }
 
 // And implements MultiAnd.
@@ -52,12 +70,14 @@ func (m *multi) Or(v QueryEncoder) MultiOr {
 
 // EncodeQuery implements MultiAnd.
 func (m *multi) EncodeQuery(buf *fast.StringBuffer, queryArgs *[]any) {
-	if len(m.ops) == 0 {
-		buf.WriteString("1 = 1")
-		return
-	}
+	if m.cond {
+		if len(m.ops) == 0 {
+			buf.WriteString("1 = 1")
+			return
+		}
 
-	buf.WriteByte('(')
+		buf.WriteByte('(')
+	}
 
 	for i := range m.ops {
 		if i != 0 {
@@ -67,5 +87,7 @@ func (m *multi) EncodeQuery(buf *fast.StringBuffer, queryArgs *[]any) {
 		m.ops[i].EncodeQuery(buf, queryArgs)
 	}
 
-	buf.WriteByte(')')
+	if m.cond {
+		buf.WriteByte(')')
+	}
 }
