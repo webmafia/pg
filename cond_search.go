@@ -64,7 +64,7 @@ func PrefixSearch(str string) string {
 
 		// If starting a new word, add a space if it's not the first word
 		if !inWord && buf.Len() > 0 {
-			buf.WriteByte(' ')
+			buf.WriteString(" & ")
 		}
 		inWord = true // We are now in a word
 
