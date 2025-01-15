@@ -4,6 +4,20 @@ import "github.com/webmafia/fast"
 
 //go:inline
 func op(col any, op string, val any) QueryEncoder {
+	if val == nil {
+		if op == " = " {
+			return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
+				writeAnyIdentifier(buf, col)
+				buf.WriteString(" IS NULL")
+			})
+		} else if op == " != " {
+			return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
+				writeAnyIdentifier(buf, col)
+				buf.WriteString(" IS NOT NULL")
+			})
+		}
+	}
+
 	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
 		writeAnyIdentifier(buf, col)
 		buf.WriteString(op)
