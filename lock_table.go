@@ -38,6 +38,6 @@ func (db *DB) LockTable(ctx context.Context, table Identifier, lockMode ...LockM
 		mode = lockMode[0]
 	}
 
-	_, err = db.Exec(ctx, "LOCK TABLE %t IN %s", mode)
+	_, err = db.Exec(ctx, "LOCK TABLE %t IN %s", table, mode)
 	return
 }
