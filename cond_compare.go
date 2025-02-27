@@ -100,6 +100,26 @@ func NotIn(col any, val any) QueryEncoder {
 	})
 }
 
+func Any(col any, val any) QueryEncoder {
+	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
+		writeAnyIdentifier(buf, col)
+
+		buf.WriteString(" = ANY (")
+		writeQueryArg(buf, queryArgs, val)
+		buf.WriteByte(')')
+	})
+}
+
+func All(col any, val any) QueryEncoder {
+	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
+		writeAnyIdentifier(buf, col)
+
+		buf.WriteString(" = ALL (")
+		writeQueryArg(buf, queryArgs, val)
+		buf.WriteByte(')')
+	})
+}
+
 // Prefix LIKE match. Optionally search on suffix as well.
 func Like(col any, val string, alsoSuffix ...bool) QueryEncoder {
 	if len(alsoSuffix) > 0 && alsoSuffix[0] {
