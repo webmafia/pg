@@ -103,9 +103,20 @@ func NotIn(col any, val any) QueryEncoder {
 func Any(col any, val any) QueryEncoder {
 	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
 		writeAnyIdentifier(buf, col)
-
 		buf.WriteString(" = ANY (")
-		writeQueryArg(buf, queryArgs, val)
+
+		switch v := val.(type) {
+
+		case StringEncoder:
+			v.EncodeString(buf)
+
+		case QueryEncoder:
+			v.EncodeQuery(buf, queryArgs)
+
+		default:
+			writeQueryArg(buf, queryArgs, val)
+		}
+
 		buf.WriteByte(')')
 	})
 }
@@ -113,9 +124,20 @@ func Any(col any, val any) QueryEncoder {
 func All(col any, val any) QueryEncoder {
 	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
 		writeAnyIdentifier(buf, col)
-
 		buf.WriteString(" = ALL (")
-		writeQueryArg(buf, queryArgs, val)
+
+		switch v := val.(type) {
+
+		case StringEncoder:
+			v.EncodeString(buf)
+
+		case QueryEncoder:
+			v.EncodeQuery(buf, queryArgs)
+
+		default:
+			writeQueryArg(buf, queryArgs, val)
+		}
+
 		buf.WriteByte(')')
 	})
 }
