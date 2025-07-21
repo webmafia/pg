@@ -8,7 +8,15 @@ type ChainedIdentifier [2]StringEncoder
 
 // EncodeString implements StringEncoder.
 func (t ChainedIdentifier) EncodeString(b *fast.StringBuffer) {
-	t[0].EncodeString(b)
+	switch t[0].(type) {
+	case ChainedIdentifier:
+		b.WriteByte('(')
+		t[0].EncodeString(b)
+		b.WriteByte(')')
+	default:
+		t[0].EncodeString(b)
+	}
+
 	b.WriteByte('.')
 	t[1].EncodeString(b)
 }
