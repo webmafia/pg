@@ -28,3 +28,7 @@ func (t ChainedIdentifier) Col(col string) ChainedIdentifier {
 func (t ChainedIdentifier) Alias(col string) Alias {
 	return Alias{t[1], Identifier(col)}
 }
+
+func (t ChainedIdentifier) GetJSONValue(field string) ChainedJSONField {
+	return ChainedJSONField{t, JSONField(field)}
+}
