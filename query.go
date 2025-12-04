@@ -45,12 +45,14 @@ func (db *DB) Query(ctx context.Context, query string, args ...any) (rows pgx.Ro
 	stmt, mem, err := db.prepare(ctx, conn, query, args)
 
 	if err != nil {
+		conn.Release()
 		return
 	}
 
 	defer mem.reset()
 
 	if rows, err = conn.Query(ctx, stmt.Name, mem.args...); err != nil {
+		conn.Release()
 		return
 	}
 
@@ -90,6 +92,7 @@ func (db *DB) QueryRow(ctx context.Context, query string, args ...any) (row pgx.
 	stmt, mem, err := db.prepare(ctx, conn, query, args)
 
 	if err != nil {
+		conn.Release()
 		return &poolRow{err: err}
 	}
 
