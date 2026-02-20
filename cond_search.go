@@ -9,6 +9,7 @@ import (
 type SearchOptions struct {
 	Dictionary   string
 	Preprocessor func(string) string
+	Exclude      bool
 }
 
 func (opt *SearchOptions) setDefaults() {
@@ -31,12 +32,20 @@ func Search(col any, val string, options ...SearchOptions) QueryEncoder {
 	}
 
 	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
+		if opt.Exclude {
+			buf.WriteString("(NOT ")
+		}
+
 		writeAnyIdentifier(buf, col)
 		buf.WriteString(" @@ to_tsquery('")
 		buf.WriteString(opt.Dictionary)
 		buf.WriteString("', ")
 		writeAny(buf, queryArgs, val)
 		buf.WriteByte(')')
+
+		if opt.Exclude {
+			buf.WriteByte(')')
+		}
 	})
 }
 

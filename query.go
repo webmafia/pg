@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/webmafia/fast"
 )
 
 // Query sends a query to the server and returns a Rows to read the results. Only errors encountered sending the query
@@ -70,6 +71,16 @@ func (db *DB) Query(ctx context.Context, query string, args ...any) (rows pgx.Ro
 	}
 
 	return
+}
+
+func (db *DB) QueryStr(ctx context.Context, query string, args ...any) (_ string, err error) {
+	buf := fast.NewStringBuffer(256)
+	qa := make([]any, 0, 4)
+	if err = encodeQuery(buf, query, args, &qa); err != nil {
+		return
+	}
+
+	return buf.String(), nil
 }
 
 // QueryRow is a convenience wrapper over Query. Any error that occurs while querying is deferred
