@@ -24,6 +24,8 @@ func Columns(cols []StringEncoder) QueryEncoder {
 
 func Col(s string) StringEncoder {
 	return EncodeString(func(buf *fast.StringBuffer) {
+		buf.WriteByte('"')
 		buf.WriteString(s)
+		buf.WriteByte('"')
 	})
 }
