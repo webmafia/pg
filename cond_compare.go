@@ -150,6 +150,17 @@ func Like(col any, val string, alsoSuffix ...bool) QueryEncoder {
 	return op(col, " LIKE ", val)
 }
 
+// Prefix ILIKE match. Optionally search on suffix as well.
+func ILike(col any, val string, alsoSuffix ...bool) QueryEncoder {
+	if len(alsoSuffix) > 0 && alsoSuffix[0] {
+		val = "%" + val + "%"
+	} else {
+		val += "%"
+	}
+
+	return op(col, " ILIKE ", val)
+}
+
 // Negative prefix LIKE match. Optionally search on suffix as well.
 func NotLike(col any, val string, alsoSuffix ...bool) QueryEncoder {
 	if len(alsoSuffix) > 0 && alsoSuffix[0] {
@@ -159,4 +170,15 @@ func NotLike(col any, val string, alsoSuffix ...bool) QueryEncoder {
 	}
 
 	return op(col, " NOT LIKE ", val)
+}
+
+// Negative prefix LIKE match. Optionally search on suffix as well.
+func NotILike(col any, val string, alsoSuffix ...bool) QueryEncoder {
+	if len(alsoSuffix) > 0 && alsoSuffix[0] {
+		val = "%" + val + "%"
+	} else {
+		val += "%"
+	}
+
+	return op(col, " NOT ILIKE ", val)
 }
