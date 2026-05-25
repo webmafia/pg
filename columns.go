@@ -29,3 +29,9 @@ func Col(s string) StringEncoder {
 		buf.WriteByte('"')
 	})
 }
+
+func RawCol(s string) StringEncoder {
+	return EncodeString(func(buf *fast.StringBuffer) {
+		buf.WriteString(s)
+	})
+}
