@@ -75,22 +75,24 @@ func In(col any, val any) QueryEncoder {
 
 func NotIn(col any, val any) QueryEncoder {
 	return Cond(func(buf *fast.StringBuffer, queryArgs *[]any) {
-		writeAnyIdentifier(buf, col)
-
 		switch v := val.(type) {
 
 		case StringEncoder:
+			writeAnyIdentifier(buf, col)
 			buf.WriteString(" NOT IN (")
 			v.EncodeString(buf)
 			buf.WriteByte(')')
 
 		case QueryEncoder:
+			writeAnyIdentifier(buf, col)
 			buf.WriteString(" NOT IN (")
 			v.EncodeQuery(buf, queryArgs)
 			buf.WriteByte(')')
 
 		default:
-			buf.WriteString(" != ANY (")
+			buf.WriteString(" NOT ")
+			writeAnyIdentifier(buf, col)
+			buf.WriteString(" = ANY (")
 			writeQueryArg(buf, queryArgs, val)
 			buf.WriteByte(')')
 		}
